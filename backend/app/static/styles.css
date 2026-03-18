@@ -25,6 +25,7 @@ body {
 .subtle { color: var(--muted); margin: 0; max-width: 760px; }
 .header-stats { display: flex; gap: 10px; flex-wrap: wrap; }
 .pill, .badge {
+  white-space: nowrap;
   border: 1px solid var(--line);
   background: rgba(255,255,255,0.03);
   padding: 8px 12px;
@@ -67,6 +68,7 @@ select {
   padding: 0 14px; cursor: pointer;
 }
 .cluster-meta, .uncertainty, .source-item, .watch-item, .transmission-item { color: var(--muted); font-size: 0.92rem; }
+.header-stats { align-items: flex-start; }
 .grid-two { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .tags { display: flex; gap: 8px; flex-wrap: wrap; }
 .tag {

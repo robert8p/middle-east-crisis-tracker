@@ -6,6 +6,35 @@ async function loadDashboard() {
   render(data);
 }
 
+function parseDate(value) {
+  return value ? new Date(value) : null;
+}
+
+function ageLabel(value) {
+  const date = parseDate(value);
+  if (!date || Number.isNaN(date.getTime())) return 'Time unknown';
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.max(Math.floor(diffMs / 60000), 0);
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
+function latestSourceTimestamp(clusters) {
+  const timestamps = [];
+  clusters.forEach(cluster => {
+    if (cluster.time_max_utc) timestamps.push(cluster.time_max_utc);
+    (cluster.supporting_sources || []).forEach(source => {
+      if (source.published_at_utc) timestamps.push(source.published_at_utc);
+    });
+  });
+  if (!timestamps.length) return null;
+  return timestamps.sort().reverse()[0];
+}
+
 function populateFilters(clusters) {
   const select = document.getElementById('filterEventType');
   const values = [...new Set(clusters.map(c => c.event_type))].sort();
@@ -21,7 +50,11 @@ function populateFilters(clusters) {
 }
 
 function render(data) {
-  document.getElementById('generatedAt').textContent = `Updated ${new Date(data.generated_at_utc).toLocaleString()}`;
+  document.getElementById('generatedAt').textContent = `Last ingestion: ${ageLabel(data.generated_at_utc)}`;
+  document.getElementById('generatedAt').title = new Date(data.generated_at_utc).toLocaleString();
+  const latestSource = latestSourceTimestamp(data.clusters);
+  document.getElementById('latestSourceAge').textContent = `Latest source: ${ageLabel(latestSource)}`;
+  document.getElementById('latestSourceAge').title = latestSource ? new Date(latestSource).toLocaleString() : 'No source timestamps available';
   document.getElementById('clusterCount').textContent = `${data.stats.cluster_count} clusters`;
   document.getElementById('degradedCount').textContent = `${data.stats.degraded_sources} degraded sources`;
   document.getElementById('criticalCount').textContent = data.stats.critical_clusters;
@@ -52,7 +85,7 @@ function filterClusters(clusters) {
 }
 
 function humanizeEventType(value) {
-  return (value || '').replace(/_/g, ' ').replace(/\w/g, ch => ch.toUpperCase());
+  return (value || '').replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
 }
 
 function sourceCountLabel(count) {
@@ -94,8 +127,9 @@ function renderClusters(clusters) {
     node.querySelector('.why').textContent = cluster.why_it_matters;
     node.querySelector('.market').textContent = cluster.market_impact;
     node.querySelector('.uncertainty').textContent = cluster.uncertainty_notes;
+    const updatedAge = ageLabel(cluster.time_max_utc || cluster.time_min_utc);
     node.querySelector('.cluster-meta').textContent =
-      `${sourceCountLabel(cluster.corroboration_count + 1)} • ${cluster.countries_involved.join(', ') || 'Region not explicit'} • ${cluster.actors_involved.join(', ') || 'Actors not explicit'}`;
+      `${sourceCountLabel(cluster.corroboration_count + 1)} • Updated ${updatedAge} • ${cluster.countries_involved.join(', ') || 'Region not explicit'} • ${cluster.actors_involved.join(', ') || 'Actors not explicit'}`;
 
     const tags = node.querySelector('.tags');
     [...cluster.locations, ...cluster.asset_exposure_tags].slice(0, 8).forEach(t => {
@@ -117,7 +151,7 @@ function renderClusters(clusters) {
       const title = document.createElement('div');
       title.textContent = s.title;
       const time = document.createElement('div');
-      time.textContent = published;
+      time.textContent = `${published} • ${ageLabel(s.published_at_utc)}`;
       const linkWrap = document.createElement('div');
       const link = document.createElement('a');
       link.href = s.url;
