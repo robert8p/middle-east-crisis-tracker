@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Middle East Crisis Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div>
+        <p class="eyebrow">Decision support under uncertainty</p>
+        <h1>Middle East Crisis Tracker</h1>
+        <p class="subtle">Evidence-weighted crisis tracking with deduplicated events, explicit uncertainty, and operational market relevance.</p>
+      </div>
+      <div class="header-stats">
+        <div class="pill" id="generatedAt">Loading…</div>
+        <div class="pill" id="clusterCount">0 clusters</div>
+        <div class="pill" id="degradedCount">0 degraded sources</div>
+      </div>
+    </header>
+
+    <section class="hero card">
+      <div class="hero-main">
+        <p class="label">Situation view</p>
+        <h2 id="situationLabel">Loading...</h2>
+        <p id="situationRationale"></p>
+      </div>
+      <div class="hero-side">
+        <div class="metric">
+          <span>Confidence</span>
+          <strong id="situationConfidence">-</strong>
+        </div>
+        <div class="metric">
+          <span>Critical clusters</span>
+          <strong id="criticalCount">-</strong>
+        </div>
+        <div class="metric">
+          <span>Shipping exposed</span>
+          <strong id="shippingCount">-</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <aside class="sidebar">
+        <div class="card">
+          <p class="label">Filters</p>
+          <label>
+            Event type
+            <select id="filterEventType">
+              <option value="">All</option>
+            </select>
+          </label>
+          <label>
+            Confidence
+            <select id="filterConfidence">
+              <option value="">All</option>
+              <option value="High confidence">High confidence</option>
+              <option value="Moderate confidence">Moderate confidence</option>
+              <option value="Low confidence">Low confidence</option>
+              <option value="Unverified">Unverified</option>
+            </select>
+          </label>
+          <label>
+            Materiality
+            <select id="filterMateriality">
+              <option value="">All</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </label>
+          <label>
+            Exposure
+            <select id="filterExposure">
+              <option value="">All</option>
+              <option value="oil">Oil</option>
+              <option value="shipping">Shipping</option>
+              <option value="equities">Equities</option>
+              <option value="crypto">Crypto</option>
+              <option value="gold">Gold</option>
+              <option value="fx">FX / USD</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="card">
+          <p class="label">Forward watchlist</p>
+          <div id="scheduledWatch"></div>
+          <div id="inferredWatch"></div>
+        </div>
+
+        <div class="card">
+          <p class="label">Market transmission</p>
+          <div id="marketTransmission"></div>
+        </div>
+
+        <div class="card">
+          <p class="label">Source health</p>
+          <div id="sourceHealth"></div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="card">
+          <p class="label">Clustered developments</p>
+          <div id="clusterList" class="cluster-list"></div>
+        </div>
+      </main>
+    </section>
+  </div>
+
+  <template id="clusterTemplate">
+    <article class="cluster card">
+      <div class="cluster-top">
+        <div>
+          <div class="badges">
+            <span class="badge event-type"></span>
+            <span class="badge confidence"></span>
+            <span class="badge materiality"></span>
+          </div>
+          <h3 class="cluster-title"></h3>
+          <p class="cluster-meta"></p>
+        </div>
+        <button class="toggle-btn">Evidence</button>
+      </div>
+      <p class="cluster-summary"></p>
+      <div class="grid-two">
+        <div>
+          <p class="mini-label">Why it matters</p>
+          <p class="why"></p>
+        </div>
+        <div>
+          <p class="mini-label">Market impact</p>
+          <p class="market"></p>
+        </div>
+      </div>
+      <p class="uncertainty"></p>
+      <div class="tags"></div>
+      <div class="evidence hidden"></div>
+    </article>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

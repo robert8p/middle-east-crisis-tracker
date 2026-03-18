@@ -1,0 +1,92 @@
+:root {
+  --bg: #0d1321;
+  --panel: #151d2f;
+  --panel-2: #1c2740;
+  --text: #e8edf7;
+  --muted: #99a8c6;
+  --line: #2a3652;
+  --good: #8ad2a0;
+  --warn: #f4c96b;
+  --bad: #f08c7d;
+  --info: #7fb3ff;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #0d1321 0%, #0f1728 100%);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.page { max-width: 1440px; margin: 0 auto; padding: 24px; }
+.header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
+.header h1 { margin: 6px 0 8px; font-size: 2rem; }
+.eyebrow, .label, .mini-label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; color: var(--muted); }
+.subtle { color: var(--muted); margin: 0; max-width: 760px; }
+.header-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.pill, .badge {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.03);
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 0.86rem;
+}
+.card {
+  background: rgba(17, 24, 39, 0.78);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  backdrop-filter: blur(8px);
+}
+.hero { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.hero-main h2 { margin: 8px 0 8px; font-size: 1.6rem; }
+.hero-side { display: grid; grid-template-columns: repeat(3, minmax(100px, 1fr)); gap: 10px; min-width: 360px; }
+.metric { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.metric span { display: block; color: var(--muted); font-size: 0.82rem; margin-bottom: 6px; }
+.metric strong { font-size: 1.2rem; }
+
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 18px; }
+.sidebar { display: flex; flex-direction: column; gap: 16px; }
+.content { min-width: 0; }
+
+label { display: block; color: var(--muted); font-size: 0.86rem; margin-top: 12px; }
+select {
+  margin-top: 6px; width: 100%; padding: 10px 12px; border-radius: 10px;
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+}
+.cluster-list { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
+.cluster h3 { margin: 10px 0 8px; font-size: 1.1rem; }
+.cluster p { margin: 0 0 10px; }
+.cluster-top { display: flex; justify-content: space-between; gap: 14px; }
+.badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.toggle-btn {
+  height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+  padding: 0 14px; cursor: pointer;
+}
+.cluster-meta, .uncertainty, .source-item, .watch-item, .transmission-item { color: var(--muted); font-size: 0.92rem; }
+.grid-two { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag {
+  padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 0.82rem;
+}
+.evidence { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.hidden { display: none; }
+.source-list, .watch-list, .transmission-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.source-item strong, .watch-item strong, .transmission-item strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+.badge.conf-high, .badge.mat-critical { border-color: rgba(138,210,160,0.35); color: var(--good); }
+.badge.conf-mid, .badge.mat-high { border-color: rgba(244,201,107,0.35); color: var(--warn); }
+.badge.conf-low, .badge.mat-medium { border-color: rgba(127,179,255,0.35); color: var(--info); }
+.badge.conf-unverified, .badge.mat-low { border-color: rgba(240,140,125,0.35); color: var(--bad); }
+
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: 1fr; }
+  .hero { flex-direction: column; }
+  .hero-side { min-width: 0; }
+}
+@media (max-width: 700px) {
+  .grid-two, .hero-side { grid-template-columns: 1fr; }
+  .header { flex-direction: column; }
+}
