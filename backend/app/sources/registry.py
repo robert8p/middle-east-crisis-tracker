@@ -22,6 +22,7 @@ class UNSecurityCouncilRss(RssSource):
     name = "un_security_council_rss"
     source_type = "institutional"
     source_label = "UN Security Council"
+    default_enabled = False
     url = "https://www.un.org/securitycouncil/rss"
 
 
@@ -84,6 +85,7 @@ class GovUkSanctions(HtmlListSource):
 class UKMTORecentIncidents(HtmlListSource):
     name = "ukmto_recent_incidents"
     source_type = "maritime"
+    default_enabled = False
     config = HtmlListConfig(
         url="https://www.ukmto.org/recent-incidents",
         item_selector=".card, article, .list-group-item, main .row",
@@ -98,6 +100,7 @@ class UKMTORecentIncidents(HtmlListSource):
 class IsraelMfaPress(HtmlListSource):
     name = "israel_mfa_press"
     source_type = "official"
+    default_enabled = False
     config = HtmlListConfig(
         url="https://www.mfa.gov.il/",
         item_selector="article, .item, .news-item",
@@ -112,6 +115,7 @@ class IsraelMfaPress(HtmlListSource):
 class GovIlNews(HtmlListSource):
     name = "govil_news"
     source_type = "official"
+    default_enabled = False
     config = HtmlListConfig(
         url="https://www.gov.il/en/collectors/news",
         item_selector="article, .item, .search-result, li",
@@ -126,6 +130,7 @@ class GovIlNews(HtmlListSource):
 class IranMfaStatements(HtmlListSource):
     name = "iran_mfa_statements"
     source_type = "official"
+    default_enabled = False
     config = HtmlListConfig(
         url="https://en.mfa.gov.ir/portal/newsagencyshow/699",
         item_selector="li, article, .news-item",

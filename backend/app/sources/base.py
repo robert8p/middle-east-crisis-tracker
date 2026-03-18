@@ -22,6 +22,7 @@ class SourceResult:
 class BaseSource:
     name: str = "base"
     source_type: str = "unknown"
+    default_enabled: bool = True
 
     def __init__(self) -> None:
         self.settings = get_settings()
@@ -29,7 +30,7 @@ class BaseSource:
     @property
     def enabled(self) -> bool:
         overrides = self.settings.enabled_overrides()
-        return overrides.get(self.name, True)
+        return overrides.get(self.name, self.default_enabled)
 
     def fetch(self) -> SourceResult:
         raise NotImplementedError
@@ -41,6 +42,8 @@ class BaseSource:
             "Accept-Language": "en-GB,en;q=0.9",
             "Cache-Control": "no-cache",
             "Pragma": "no-cache",
+            "Referer": self.settings.app_base_url,
+            "Upgrade-Insecure-Requests": "1",
         }
         start = time.perf_counter()
         resp = requests.get(url, headers=headers, timeout=self.settings.app_source_timeout_seconds)

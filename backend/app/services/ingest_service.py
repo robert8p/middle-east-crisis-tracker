@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from datetime import datetime
 
 from sqlalchemy import delete, select
@@ -16,6 +17,7 @@ from .normalization import is_relevant_item, normalize_raw_item
 from .scoring import confidence_score, materiality_score, novelty_score
 
 logger = logging.getLogger(__name__)
+_INGEST_LOCK = threading.Lock()
 
 
 class IngestService:
@@ -115,134 +117,144 @@ class IngestService:
                 )
 
     def run_ingestion(self) -> dict:
-        recent_records = self._load_recent_events()
-        recent_event_items = [
-            EventItem(
-                event_uid=r.event_uid,
-                title=r.title,
-                source=r.source,
-                source_type=r.source_type,
-                url=r.url,
-                published_at_utc=r.published_at_utc,
-                detected_event_time_utc=r.detected_event_time_utc,
-                countries_involved=r.countries_involved,
-                actors_involved=r.actors_involved,
-                locations=r.locations,
-                event_type=r.event_type,
-                asset_exposure_tags=r.asset_exposure_tags,
-                confidence_score=r.confidence_score,
-                confidence_band=r.confidence_band,
-                materiality_score=r.materiality_score,
-                materiality_band=r.materiality_band,
-                novelty_score=r.novelty_score,
-                corroboration_count=r.corroboration_count,
-                summary=r.summary,
-                why_it_matters=r.why_it_matters,
-                operational_impact=r.operational_impact,
-                market_impact=r.market_impact,
-                uncertainty_notes=r.uncertainty_notes,
-                raw_text=r.raw_text,
-                raw_payload=r.raw_payload,
-                fingerprint=r.fingerprint,
-            )
-            for r in recent_records
-        ]
+        if not _INGEST_LOCK.acquire(blocking=False):
+            logger.info("ingestion_skipped reason=already_running")
+            return {"skipped": True, "reason": "already_running", "generated_at_utc": utcnow_naive().isoformat()}
 
-        source_health_items: list[SourceHealthItem] = []
-        normalized: list[EventItem] = []
+        try:
+            recent_records = self._load_recent_events()
+            recent_event_items = [
+                EventItem(
+                    event_uid=r.event_uid,
+                    title=r.title,
+                    source=r.source,
+                    source_type=r.source_type,
+                    url=r.url,
+                    published_at_utc=r.published_at_utc,
+                    detected_event_time_utc=r.detected_event_time_utc,
+                    countries_involved=r.countries_involved,
+                    actors_involved=r.actors_involved,
+                    locations=r.locations,
+                    event_type=r.event_type,
+                    asset_exposure_tags=r.asset_exposure_tags,
+                    confidence_score=r.confidence_score,
+                    confidence_band=r.confidence_band,
+                    materiality_score=r.materiality_score,
+                    materiality_band=r.materiality_band,
+                    novelty_score=r.novelty_score,
+                    corroboration_count=r.corroboration_count,
+                    summary=r.summary,
+                    why_it_matters=r.why_it_matters,
+                    operational_impact=r.operational_impact,
+                    market_impact=r.market_impact,
+                    uncertainty_notes=r.uncertainty_notes,
+                    raw_text=r.raw_text,
+                    raw_payload=r.raw_payload,
+                    fingerprint=r.fingerprint,
+                )
+                for r in recent_records
+            ]
 
-        for source in get_sources():
-            start = utcnow_naive()
-            result = source.fetch()
-            health = SourceHealthItem(
-                source_name=result.source_name,
-                source_type=result.source_type,
-                enabled=source.enabled,
-                last_attempt_utc=start,
-                last_success_utc=None if result.error else utcnow_naive(),
-                last_error=result.error,
-                last_response_time_ms=result.response_time_ms,
-                fetch_failures=1 if result.error else 0,
-                items_ingested_last_run=len(result.items),
-                cache_age_seconds=0,
-                degraded=bool(result.error),
-            )
+            source_health_items: list[SourceHealthItem] = []
+            normalized: list[EventItem] = []
 
-            if result.error:
-                logger.warning("source_failed source=%s error=%s", result.source_name, result.error)
+            for source in get_sources():
+                start = utcnow_naive()
+                result = source.fetch()
+                health = SourceHealthItem(
+                    source_name=result.source_name,
+                    source_type=result.source_type,
+                    enabled=source.enabled,
+                    last_attempt_utc=start,
+                    last_success_utc=None if result.error else utcnow_naive(),
+                    last_error=result.error,
+                    last_response_time_ms=result.response_time_ms,
+                    fetch_failures=1 if result.error else 0,
+                    items_ingested_last_run=len(result.items),
+                    cache_age_seconds=0,
+                    degraded=bool(result.error),
+                )
+
+                if result.error:
+                    logger.warning("source_failed source=%s error=%s", result.source_name, result.error)
+                    self._persist_source_health(health)
+                    source_health_items.append(health)
+                    continue
+
+                for raw in result.items:
+                    try:
+                        if not is_relevant_item(raw):
+                            continue
+                        item = normalize_raw_item(raw)
+                        peers = recent_event_items + normalized
+                        item.corroboration_count = sum(
+                            1
+                            for peer in peers
+                            if peer.source != item.source and similarity(item, peer) >= 0.60
+                        )
+                        item.confidence_score, item.confidence_band = confidence_score(item)
+                        item.materiality_score, item.materiality_band = materiality_score(item)
+                        similarity_to_recent = max((similarity(item, peer) for peer in peers), default=0.0)
+                        item.novelty_score = novelty_score(item, similarity_to_recent)
+                        normalized.append(item)
+                    except Exception as exc:
+                        logger.warning(
+                            "item_normalization_failed source=%s title=%s error=%s",
+                            result.source_name,
+                            raw.get("title", "")[:120],
+                            exc,
+                        )
+
                 self._persist_source_health(health)
                 source_health_items.append(health)
-                continue
 
-            for raw in result.items:
-                try:
-                    if not is_relevant_item(raw):
-                        continue
-                    item = normalize_raw_item(raw)
-                    # Approximate corroboration against recent + current normalized items
-                    peers = recent_event_items + normalized
-                    item.corroboration_count = sum(
-                        1
-                        for peer in peers
-                        if peer.source != item.source and similarity(item, peer) >= 0.60
-                    )
-                    item.confidence_score, item.confidence_band = confidence_score(item)
-                    item.materiality_score, item.materiality_band = materiality_score(item)
-                    similarity_to_recent = max((similarity(item, peer) for peer in peers), default=0.0)
-                    item.novelty_score = novelty_score(item, similarity_to_recent)
-                    normalized.append(item)
-                except Exception as exc:
-                    logger.warning("item_normalization_failed source=%s title=%s error=%s", result.source_name, raw.get("title", "")[:120], exc)
+            self._persist_events(normalized)
 
-            self._persist_source_health(health)
-            source_health_items.append(health)
+            all_records = self._load_recent_events()
+            all_items = [
+                EventItem(
+                    event_uid=r.event_uid,
+                    title=r.title,
+                    source=r.source,
+                    source_type=r.source_type,
+                    url=r.url,
+                    published_at_utc=r.published_at_utc,
+                    detected_event_time_utc=r.detected_event_time_utc,
+                    countries_involved=r.countries_involved,
+                    actors_involved=r.actors_involved,
+                    locations=r.locations,
+                    event_type=r.event_type,
+                    asset_exposure_tags=r.asset_exposure_tags,
+                    confidence_score=r.confidence_score,
+                    confidence_band=r.confidence_band,
+                    materiality_score=r.materiality_score,
+                    materiality_band=r.materiality_band,
+                    novelty_score=r.novelty_score,
+                    corroboration_count=r.corroboration_count,
+                    summary=r.summary,
+                    why_it_matters=r.why_it_matters,
+                    operational_impact=r.operational_impact,
+                    market_impact=r.market_impact,
+                    uncertainty_notes=r.uncertainty_notes,
+                    raw_text=r.raw_text,
+                    raw_payload=r.raw_payload,
+                    fingerprint=r.fingerprint,
+                )
+                for r in all_records
+            ]
 
-        self._persist_events(normalized)
+            clusters = cluster_events(all_items)
+            self._persist_clusters(clusters)
 
-        # Load all recent again after persistence, then cluster
-        all_records = self._load_recent_events()
-        all_items = [
-            EventItem(
-                event_uid=r.event_uid,
-                title=r.title,
-                source=r.source,
-                source_type=r.source_type,
-                url=r.url,
-                published_at_utc=r.published_at_utc,
-                detected_event_time_utc=r.detected_event_time_utc,
-                countries_involved=r.countries_involved,
-                actors_involved=r.actors_involved,
-                locations=r.locations,
-                event_type=r.event_type,
-                asset_exposure_tags=r.asset_exposure_tags,
-                confidence_score=r.confidence_score,
-                confidence_band=r.confidence_band,
-                materiality_score=r.materiality_score,
-                materiality_band=r.materiality_band,
-                novelty_score=r.novelty_score,
-                corroboration_count=r.corroboration_count,
-                summary=r.summary,
-                why_it_matters=r.why_it_matters,
-                operational_impact=r.operational_impact,
-                market_impact=r.market_impact,
-                uncertainty_notes=r.uncertainty_notes,
-                raw_text=r.raw_text,
-                raw_payload=r.raw_payload,
-                fingerprint=r.fingerprint,
-            )
-            for r in all_records
-        ]
-
-        clusters = cluster_events(all_items)
-        self._persist_clusters(clusters)
-
-        return {
-            "ingested_events": len(normalized),
-            "cluster_count": len(clusters),
-            "sources_total": len(source_health_items),
-            "sources_degraded": sum(1 for s in source_health_items if s.degraded),
-            "generated_at_utc": utcnow_naive().isoformat(),
-        }
+            return {
+                "ingested_events": len(normalized),
+                "cluster_count": len(clusters),
+                "sources_total": len(source_health_items),
+                "sources_degraded": sum(1 for s in source_health_items if s.degraded),
+                "generated_at_utc": utcnow_naive().isoformat(),
+            }
+        finally:
+            _INGEST_LOCK.release()
 
     def recluster(self) -> dict:
         all_records = self._load_recent_events()

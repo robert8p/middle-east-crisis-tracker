@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
@@ -36,17 +37,25 @@ def health():
     return {"ok": True, "service": "middle-east-crisis-tracker", "generated_at_utc": utcnow_naive().isoformat()}
 
 
+def _safe_ingestion_run(context: str = "background") -> None:
+    try:
+        result = IngestService().run_ingestion()
+        logger.info("ingestion_completed context=%s result=%s", context, result)
+    except Exception as exc:
+        logger.exception("ingestion_failed context=%s error=%s", context, exc)
+
+
 @app.on_event("startup")
 def startup_event():
     global scheduler
-    try:
-        IngestService().run_ingestion()
-    except Exception as exc:
-        logger.exception("initial_ingestion_failed: %s", exc)
+
+    if settings.app_run_startup_ingestion:
+        threading.Thread(target=_safe_ingestion_run, kwargs={"context": "startup"}, daemon=True).start()
+        logger.info("startup_ingestion_dispatched mode=background")
 
     if settings.app_enable_background_refresh:
         scheduler = BackgroundScheduler()
-        scheduler.add_job(IngestService().run_ingestion, "interval", minutes=settings.app_refresh_interval_minutes, max_instances=1, coalesce=True)
+        scheduler.add_job(_safe_ingestion_run, "interval", minutes=settings.app_refresh_interval_minutes, max_instances=1, coalesce=True, kwargs={"context": "scheduled"})
         scheduler.start()
         logger.info("scheduler_started interval_minutes=%s", settings.app_refresh_interval_minutes)
 

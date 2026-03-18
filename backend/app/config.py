@@ -15,9 +15,10 @@ class Settings(BaseSettings):
     app_admin_token: str = "change-me"
     app_database_url: str = "sqlite:///./mect.db"
     app_refresh_interval_minutes: int = 15
-    app_source_timeout_seconds: int = 12
+    app_source_timeout_seconds: int = 6
     app_fetch_user_agent: str = "MiddleEastCrisisTracker/1.0 (+https://example.com)"
     app_enable_background_refresh: bool = True
+    app_run_startup_ingestion: bool = True
     app_max_items_per_source: int = 25
     app_event_lookback_hours: int = 48
     app_source_enabled_overrides: str = ""

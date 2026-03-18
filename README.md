@@ -160,3 +160,12 @@ Novelty score considers:
 ```bash
 pytest backend/tests -q
 ```
+
+## Stability defaults
+
+This build is hardened for deployment stability:
+- startup ingestion runs in the background so the web service becomes available quickly
+- known high-friction sources are disabled by default (`un_security_council_rss`, `ukmto_recent_incidents`, `israel_mfa_press`, `govil_news`, `iran_mfa_statements`)
+- you can re-enable any of them with `APP_SOURCE_ENABLED_OVERRIDES`, for example:
+  - `APP_SOURCE_ENABLED_OVERRIDES=ukmto_recent_incidents=1,govil_news=1`
+- per-source timeout defaults to 6 seconds to prevent slow startup and stalled refresh cycles
