@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import re
 from typing import Iterable
 
@@ -12,6 +13,12 @@ STOPWORDS = {
 
 def normalise_space(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").strip())
+
+def strip_html(text: str) -> str:
+    value = html.unescape(text or "")
+    value = re.sub(r"<br\s*/?>", " ", value, flags=re.IGNORECASE)
+    value = re.sub(r"<[^>]+>", " ", value)
+    return normalise_space(value)
 
 def slug_hash(value: str) -> str:
     return hashlib.sha1(normalise_space(value).lower().encode("utf-8")).hexdigest()[:20]

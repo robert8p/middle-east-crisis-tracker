@@ -59,6 +59,7 @@ select {
 .cluster-list { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
 .cluster h3 { margin: 10px 0 8px; font-size: 1.1rem; }
 .cluster p { margin: 0 0 10px; }
+.cluster-summary, .why, .market, .uncertainty, .source-item div { overflow-wrap: anywhere; word-break: break-word; }
 .cluster-top { display: flex; justify-content: space-between; gap: 14px; }
 .badges { display: flex; gap: 8px; flex-wrap: wrap; }
 .toggle-btn {
@@ -80,6 +81,7 @@ select {
 .badge.conf-mid, .badge.mat-high { border-color: rgba(244,201,107,0.35); color: var(--warn); }
 .badge.conf-low, .badge.mat-medium { border-color: rgba(127,179,255,0.35); color: var(--info); }
 .badge.conf-unverified, .badge.mat-low { border-color: rgba(240,140,125,0.35); color: var(--bad); }
+.badge.event-type { text-transform: none; }
 
 @media (max-width: 1100px) {
   .layout { grid-template-columns: 1fr; }

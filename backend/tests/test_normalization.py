@@ -24,3 +24,19 @@ def test_is_relevant_item_filters_noise_navigation_and_generic_guidance():
         "summary": "Maritime security concerns are increasing.",
         "url": "https://example.com/hormuz",
     })
+
+
+def test_normalize_strips_html_from_titles_and_summaries():
+    from backend.app.services.normalization import normalize_raw_item
+
+    item = normalize_raw_item({
+        "title": "Iran allowing more ships through Strait of Hormuz, data show - Al Jazeera",
+        "summary": 'Shipping-risk development: <a href="https://example.com">Iran allowing more ships through Strait of Hormuz</a>',
+        "source": "Google News",
+        "source_type": "aggregator",
+        "url": "https://example.com/article",
+        "published_at_utc": None,
+    })
+
+    assert '<a href=' not in item.summary
+    assert item.title == 'Iran allowing more ships through Strait of Hormuz, data show'

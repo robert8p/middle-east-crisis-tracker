@@ -5,7 +5,7 @@ import re
 
 from ..schemas import EventItem
 from ..utils.json_safe import make_json_safe
-from ..utils.text import fingerprint, normalise_space, slug_hash
+from ..utils.text import fingerprint, normalise_space, slug_hash, strip_html
 
 COUNTRY_KEYWORDS = {
     "Israel": ["israel", "israeli", "idf", "tel aviv", "jerusalem"],
@@ -129,8 +129,14 @@ def detect_exposures(text: str) -> list[str]:
     return sorted(set(tags))
 
 
+def clean_title(title: str) -> str:
+    value = strip_html(title)
+    value = re.sub(r"\s*[-–—|]\s*[^-–—|]{2,80}$", "", value)
+    return normalise_space(value)
+
+
 def build_summary(title: str, summary: str, event_type: str) -> str:
-    body = normalise_space(summary or title)
+    body = strip_html(summary or title)
     if len(body) > 220:
         body = body[:217].rstrip() + "..."
     if event_type == "shipping_disruption":
@@ -196,8 +202,8 @@ def build_uncertainty(source_type: str, title: str, corroboration_count: int) ->
 
 
 def is_relevant_item(raw: dict) -> bool:
-    title = normalise_space(raw.get("title", ""))
-    summary = normalise_space(raw.get("summary", ""))
+    title = clean_title(raw.get("title", ""))
+    summary = strip_html(raw.get("summary", ""))
     link = normalise_space(raw.get("url", ""))
     combined = f"{title} {summary}".lower()
 
@@ -227,8 +233,8 @@ def is_relevant_item(raw: dict) -> bool:
 
 
 def normalize_raw_item(raw: dict) -> EventItem:
-    title = normalise_space(raw.get("title", ""))
-    summary = normalise_space(raw.get("summary", ""))
+    title = clean_title(raw.get("title", ""))
+    summary = strip_html(raw.get("summary", ""))
     combined = normalise_space(f"{title} {summary}")
     countries = _match_labels(combined, COUNTRY_KEYWORDS)
     actors = _match_labels(combined, ACTOR_KEYWORDS)

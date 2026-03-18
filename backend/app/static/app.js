@@ -51,6 +51,14 @@ function filterClusters(clusters) {
   });
 }
 
+function humanizeEventType(value) {
+  return (value || '').replace(/_/g, ' ').replace(/\w/g, ch => ch.toUpperCase());
+}
+
+function sourceCountLabel(count) {
+  return `${count} source${count === 1 ? '' : 's'}`;
+}
+
 function badgeClass(type, value) {
   if (type === 'confidence') {
     if (value === 'High confidence') return 'conf-high';
@@ -74,7 +82,7 @@ function renderClusters(clusters) {
 
   for (const cluster of clusters) {
     const node = template.content.cloneNode(true);
-    node.querySelector('.event-type').textContent = cluster.event_type;
+    node.querySelector('.event-type').textContent = humanizeEventType(cluster.event_type);
     const conf = node.querySelector('.confidence');
     conf.textContent = cluster.confidence_band;
     conf.classList.add(badgeClass('confidence', cluster.confidence_band));
@@ -87,7 +95,7 @@ function renderClusters(clusters) {
     node.querySelector('.market').textContent = cluster.market_impact;
     node.querySelector('.uncertainty').textContent = cluster.uncertainty_notes;
     node.querySelector('.cluster-meta').textContent =
-      `${cluster.corroboration_count + 1} source(s) • ${cluster.countries_involved.join(', ') || 'Region not explicit'} • ${cluster.actors_involved.join(', ') || 'Actors not explicit'}`;
+      `${sourceCountLabel(cluster.corroboration_count + 1)} • ${cluster.countries_involved.join(', ') || 'Region not explicit'} • ${cluster.actors_involved.join(', ') || 'Actors not explicit'}`;
 
     const tags = node.querySelector('.tags');
     [...cluster.locations, ...cluster.asset_exposure_tags].slice(0, 8).forEach(t => {
@@ -104,7 +112,23 @@ function renderClusters(clusters) {
       const item = document.createElement('div');
       item.className = 'source-item';
       const published = s.published_at_utc ? new Date(s.published_at_utc).toLocaleString() : 'Time unavailable';
-      item.innerHTML = `<strong>${s.source}</strong><div>${s.title}</div><div>${published}</div><div><a href="${s.url}" target="_blank" rel="noreferrer">Open source</a></div>`;
+      const strong = document.createElement('strong');
+      strong.textContent = s.source;
+      const title = document.createElement('div');
+      title.textContent = s.title;
+      const time = document.createElement('div');
+      time.textContent = published;
+      const linkWrap = document.createElement('div');
+      const link = document.createElement('a');
+      link.href = s.url;
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      link.textContent = 'Open source';
+      linkWrap.appendChild(link);
+      item.appendChild(strong);
+      item.appendChild(title);
+      item.appendChild(time);
+      item.appendChild(linkWrap);
       evidenceList.appendChild(item);
     });
     evidence.appendChild(evidenceList);
